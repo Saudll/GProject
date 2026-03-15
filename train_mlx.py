@@ -81,24 +81,24 @@ def collect_images(data_dir: Path):
     human_dirs    = ['human', 'Human', 'person', 'Person']
     nonhuman_dirs = ['nonhuman', 'NonHuman', 'background', 'Background', 'objects']
 
-    human_paths = []
-    nonhuman_paths = []
+    human_set = set()
+    nonhuman_set = set()
 
     for name in human_dirs:
         d = data_dir / name
         if d.exists():
             for f in sorted(d.rglob("*")):
-                if f.suffix.lower() in IMAGE_EXTS:
-                    human_paths.append(str(f))
+                if f.suffix.lower() in IMAGE_EXTS and not f.name.startswith('._'):
+                    human_set.add(str(f.resolve()))
 
     for name in nonhuman_dirs:
         d = data_dir / name
         if d.exists():
             for f in sorted(d.rglob("*")):
-                if f.suffix.lower() in IMAGE_EXTS:
-                    nonhuman_paths.append(str(f))
+                if f.suffix.lower() in IMAGE_EXTS and not f.name.startswith('._'):
+                    nonhuman_set.add(str(f.resolve()))
 
-    return human_paths, nonhuman_paths
+    return sorted(human_set), sorted(nonhuman_set)
 
 
 def show_dataset_info(human_paths, nonhuman_paths):
@@ -299,15 +299,53 @@ def train(args):
     all_paths  = human_paths + nonhuman_paths
     all_labels = [1] * n_h + [0] * n_nh
 
-    # ── Train/Val split (80/20 stratified) ────────────────────────────────
-    train_paths, val_paths, train_labels, val_labels = train_test_split(
-        all_paths, all_labels,
+    # ── Group-aware Train/Val split (80/20) ───────────────────────────────
+    # Group augmentations by their base ID so all copies of one original
+    # stay together (prevents data leakage between train and val)
+    import re as _re
+
+    def get_group_id(path):
+        """Extract base group from filename: thermal_1773545574_orig.png -> thermal_1773545574"""
+        name = Path(path).stem  # e.g. thermal_1773545574_aug_3
+        # Strip _orig or _aug_N suffix
+        name = _re.sub(r'_(orig|aug_\d+)$', '', name)
+        return name
+
+    # Build groups: {group_id: [(path, label), ...]}
+    groups = {}
+    for p, l in zip(all_paths, all_labels):
+        gid = get_group_id(p)
+        if gid not in groups:
+            groups[gid] = {'label': l, 'paths': []}
+        groups[gid]['paths'].append(p)
+
+    # Split at the group level
+    group_ids = sorted(groups.keys())
+    group_labels = [groups[g]['label'] for g in group_ids]
+
+    train_gids, val_gids = train_test_split(
+        group_ids,
         test_size=0.2,
-        stratify=all_labels,
+        stratify=group_labels,
         random_state=SEED,
     )
 
-    print(f"\n  Train: {len(train_paths)} images")
+    # Flatten groups back to paths/labels
+    train_paths, train_labels = [], []
+    for gid in train_gids:
+        for p in groups[gid]['paths']:
+            train_paths.append(p)
+            train_labels.append(groups[gid]['label'])
+
+    val_paths, val_labels = [], []
+    for gid in val_gids:
+        for p in groups[gid]['paths']:
+            val_paths.append(p)
+            val_labels.append(groups[gid]['label'])
+
+    n_groups = len(groups)
+    print(f"\n  Unique originals: {n_groups} ({len(train_gids)} train / {len(val_gids)} val)")
+    print(f"  Train: {len(train_paths)} images")
     print(f"  Val:   {len(val_paths)} images")
     train_h = sum(train_labels)
     train_nh = len(train_labels) - train_h
