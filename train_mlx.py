@@ -61,6 +61,12 @@ def parse_args():
                    help='Batch size (default: 16)')
     p.add_argument('--lr',          type=float, default=1e-4,
                    help='Learning rate for fine-tuning (default: 1e-4)')
+    p.add_argument('--model',       type=str, default='mobilenetv2',
+                   choices=['mobilenetv2', 'efficientnetb0', 'resnet50',
+                            'densenet121', 'nasnetmobile'],
+                   help='Backbone model (default: mobilenetv2)')
+    p.add_argument('--compare_all', action='store_true',
+                   help='Train all 5 models and compare results')
     p.add_argument('--check',       action='store_true',
                    help='Just show dataset counts and exit')
     return p.parse_args()
@@ -201,16 +207,35 @@ class ThermalDataset:
 # MODEL
 # ─────────────────────────────────────────────────────────────────────────────
 
-def build_model():
-    """MobileNetV2 with ImageNet weights, custom head for binary classification."""
+MODELS = {
+    'mobilenetv2':   {'fn': 'MobileNetV2',      'size': '~3.4 MB TFLite', 'params': '3.4M'},
+    'efficientnetb0':{'fn': 'EfficientNetB0',    'size': '~5.3 MB TFLite', 'params': '5.3M'},
+    'resnet50':      {'fn': 'ResNet50',           'size': '~25 MB TFLite',  'params': '25.6M'},
+    'densenet121':   {'fn': 'DenseNet121',        'size': '~8 MB TFLite',   'params': '8.1M'},
+    'nasnetmobile':  {'fn': 'NASNetMobile',       'size': '~5.2 MB TFLite', 'params': '5.3M'},
+}
+
+
+def build_model(model_name='mobilenetv2'):
+    """Build backbone + custom head for binary classification."""
     import tensorflow as tf
     from tensorflow.keras import layers, Model
 
-    base = tf.keras.applications.MobileNetV2(
-        input_shape=(IMG_SIZE[0], IMG_SIZE[1], 3),
-        include_top=False,
-        weights='imagenet',
-    )
+    apps = tf.keras.applications
+    input_shape = (IMG_SIZE[0], IMG_SIZE[1], 3)
+
+    if model_name == 'mobilenetv2':
+        base = apps.MobileNetV2(input_shape=input_shape, include_top=False, weights='imagenet')
+    elif model_name == 'efficientnetb0':
+        base = apps.EfficientNetB0(input_shape=input_shape, include_top=False, weights='imagenet')
+    elif model_name == 'resnet50':
+        base = apps.ResNet50(input_shape=input_shape, include_top=False, weights='imagenet')
+    elif model_name == 'densenet121':
+        base = apps.DenseNet121(input_shape=input_shape, include_top=False, weights='imagenet')
+    elif model_name == 'nasnetmobile':
+        base = apps.NASNetMobile(input_shape=input_shape, include_top=False, weights='imagenet')
+    else:
+        sys.exit(f"Unknown model: {model_name}")
 
     # Freeze entire backbone initially
     base.trainable = False
@@ -302,11 +327,15 @@ def train(args):
     val_tf   = val_ds.to_tf_dataset()
 
     # ── Build model ───────────────────────────────────────────────────────
+    model_name = args.model
     results_dir = Path(args.results_dir)
+    if args.compare_all or model_name != 'mobilenetv2':
+        results_dir = results_dir.parent / f"{results_dir.name}_{model_name}"
     results_dir.mkdir(parents=True, exist_ok=True)
 
-    model, base = build_model()
-    print(f"\n  Model: MobileNetV2 + custom head")
+    info = MODELS[model_name]
+    model, base = build_model(model_name)
+    print(f"\n  Model: {model_name} ({info['params']} params, {info['size']})")
     print(f"  Backbone frozen for Phase 1")
 
     # ── Phase 1: Train head only (5 epochs) ───────────────────────────────
@@ -468,6 +497,7 @@ def train(args):
     # ── Save results JSON ─────────────────────────────────────────────────
     results = {
         'run': results_dir.name,
+        'model': model_name,
         'data_dir': str(data_dir),
         'n_human': n_h,
         'n_nonhuman': n_nh,
@@ -531,6 +561,8 @@ def train(args):
     print(f"\n  Copy tflite/model.tflite to your Raspberry Pi for deployment.")
     print(f"{'='*50}")
 
+    return results
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # MAIN
@@ -553,4 +585,39 @@ if __name__ == '__main__':
         print(f"    {data_dir}/nonhuman/  <- nonhuman thermal captures")
         sys.exit(1)
 
-    train(args)
+    if args.compare_all:
+        # Train all models and print comparison table
+        all_results = []
+        for name in MODELS:
+            print(f"\n{'#'*60}")
+            print(f"  TRAINING: {name} ({MODELS[name]['params']} params)")
+            print(f"{'#'*60}")
+            args.model = name
+            result = train(args)
+            all_results.append(result)
+
+        # Print comparison table
+        print(f"\n\n{'='*70}")
+        print(f"  MODEL COMPARISON")
+        print(f"{'='*70}")
+        print(f"  {'Model':<18} {'Accuracy':>8} {'Recall':>8} {'F1':>8} {'TFLite':>10} {'Threshold':>10}")
+        print(f"  {'-'*62}")
+        best_f1 = 0
+        best_name = ''
+        for r in all_results:
+            tag = ''
+            if r['f1'] > best_f1:
+                best_f1 = r['f1']
+                best_name = r['model']
+            print(f"  {r['model']:<18} {r['accuracy']*100:>7.1f}% {r['recall']*100:>7.1f}% "
+                  f"{r['f1']*100:>7.1f}% {r['tflite_mb']:>8.2f}MB {r['optimal_threshold']:>10.2f}")
+        print(f"\n  BEST MODEL: {best_name} (F1={best_f1*100:.1f}%)")
+        print(f"{'='*70}")
+
+        # Save comparison
+        comp_path = Path(args.results_dir).parent / "model_comparison.json"
+        with open(str(comp_path), 'w') as f:
+            json.dump(all_results, f, indent=2)
+        print(f"  Saved: {comp_path}")
+    else:
+        train(args)
