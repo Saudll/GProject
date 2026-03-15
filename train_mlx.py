@@ -410,8 +410,9 @@ def train(args):
 
         unfreeze_top_layers(base, n_layers=30)
 
+        # Use very low LR for fine-tuning to preserve head calibration
         model.compile(
-            optimizer=keras.optimizers.Adam(learning_rate=args.lr),
+            optimizer=keras.optimizers.Adam(learning_rate=args.lr * 0.1),
             loss='binary_crossentropy',
             metrics=['accuracy'],
         )
@@ -459,10 +460,17 @@ def train(args):
     y_true = np.array(y_true)
     y_prob = np.array(y_prob)
 
+    # Show probability distribution so we can see model calibration
+    human_probs = y_prob[y_true == 1]
+    nonhuman_probs = y_prob[y_true == 0]
+    print(f"\n  Probability distribution:")
+    print(f"    Human images:    min={human_probs.min():.3f}  mean={human_probs.mean():.3f}  max={human_probs.max():.3f}")
+    print(f"    NonHuman images: min={nonhuman_probs.min():.3f}  mean={nonhuman_probs.mean():.3f}  max={nonhuman_probs.max():.3f}")
+
     # Find optimal threshold
     best_thresh = 0.5
     best_f1 = 0
-    for t in np.arange(0.1, 0.9, 0.05):
+    for t in np.arange(0.05, 0.95, 0.05):
         y_pred_t = (y_prob >= t).astype(int)
         tp = np.sum((y_pred_t == 1) & (y_true == 1))
         fp = np.sum((y_pred_t == 1) & (y_true == 0))
