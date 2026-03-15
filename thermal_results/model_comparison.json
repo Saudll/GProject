@@ -1,0 +1,157 @@
+[
+  {
+    "run": "Run6_MLX_Only_mobilenetv2",
+    "model": "mobilenetv2",
+    "data_dir": "/GProject/dataset/real_environment",
+    "n_human": 1000,
+    "n_nonhuman": 1000,
+    "n_train": 1650,
+    "n_val": 350,
+    "epochs": 20,
+    "batch_size": 16,
+    "optimal_threshold": 0.1,
+    "accuracy": 0.9942857142857143,
+    "recall": 0.9857142857142858,
+    "precision": 1.0,
+    "f1": 0.9928057553956835,
+    "false_negatives": 2,
+    "false_positives": 0,
+    "confusion_matrix": [
+      [
+        210,
+        0
+      ],
+      [
+        2,
+        138
+      ]
+    ],
+    "tflite_path": "/GProject/thermal_results/Run6_MLX_Only_mobilenetv2/tflite/model.tflite",
+    "tflite_mb": 2.4768295288085938,
+    "gpu": "/physical_device:GPU:0"
+  },
+  {
+    "run": "Run6_MLX_Only_efficientnetb0",
+    "model": "efficientnetb0",
+    "data_dir": "/GProject/dataset/real_environment",
+    "n_human": 1000,
+    "n_nonhuman": 1000,
+    "n_train": 1650,
+    "n_val": 350,
+    "epochs": 20,
+    "batch_size": 16,
+    "optimal_threshold": 0.45000000000000007,
+    "accuracy": 0.6542857142857142,
+    "recall": 0.9857142857142858,
+    "precision": 0.5369649805447471,
+    "f1": 0.6952141057934509,
+    "false_negatives": 2,
+    "false_positives": 119,
+    "confusion_matrix": [
+      [
+        91,
+        119
+      ],
+      [
+        2,
+        138
+      ]
+    ],
+    "tflite_path": "/GProject/thermal_results/Run6_MLX_Only_efficientnetb0/tflite/model.tflite",
+    "tflite_mb": 4.422538757324219,
+    "gpu": "/physical_device:GPU:0"
+  },
+  {
+    "run": "Run6_MLX_Only_resnet50",
+    "model": "resnet50",
+    "data_dir": "/GProject/dataset/real_environment",
+    "n_human": 1000,
+    "n_nonhuman": 1000,
+    "n_train": 1650,
+    "n_val": 350,
+    "epochs": 20,
+    "batch_size": 16,
+    "optimal_threshold": 0.1,
+    "accuracy": 0.9085714285714286,
+    "recall": 0.7857142857142857,
+    "precision": 0.9821428571428571,
+    "f1": 0.873015873015873,
+    "false_negatives": 30,
+    "false_positives": 2,
+    "confusion_matrix": [
+      [
+        208,
+        2
+      ],
+      [
+        30,
+        110
+      ]
+    ],
+    "tflite_path": "/GProject/thermal_results/Run6_MLX_Only_resnet50/tflite/model.tflite",
+    "tflite_mb": 22.948257446289062,
+    "gpu": "/physical_device:GPU:0"
+  },
+  {
+    "run": "Run6_MLX_Only_densenet121",
+    "model": "densenet121",
+    "data_dir": "/GProject/dataset/real_environment",
+    "n_human": 1000,
+    "n_nonhuman": 1000,
+    "n_train": 1650,
+    "n_val": 350,
+    "epochs": 20,
+    "batch_size": 16,
+    "optimal_threshold": 0.1,
+    "accuracy": 0.9942857142857143,
+    "recall": 0.9928571428571429,
+    "precision": 0.9928571428571429,
+    "f1": 0.9928571428571429,
+    "false_negatives": 1,
+    "false_positives": 1,
+    "confusion_matrix": [
+      [
+        209,
+        1
+      ],
+      [
+        1,
+        139
+      ]
+    ],
+    "tflite_path": "/GProject/thermal_results/Run6_MLX_Only_densenet121/tflite/model.tflite",
+    "tflite_mb": 7.1441650390625,
+    "gpu": "/physical_device:GPU:0"
+  },
+  {
+    "run": "Run6_MLX_Only_nasnetmobile",
+    "model": "nasnetmobile",
+    "data_dir": "/GProject/dataset/real_environment",
+    "n_human": 1000,
+    "n_nonhuman": 1000,
+    "n_train": 1650,
+    "n_val": 350,
+    "epochs": 20,
+    "batch_size": 16,
+    "optimal_threshold": 0.5000000000000001,
+    "accuracy": 0.9857142857142858,
+    "recall": 0.9642857142857143,
+    "precision": 1.0,
+    "f1": 0.9818181818181818,
+    "false_negatives": 5,
+    "false_positives": 0,
+    "confusion_matrix": [
+      [
+        210,
+        0
+      ],
+      [
+        5,
+        135
+      ]
+    ],
+    "tflite_path": "/GProject/thermal_results/Run6_MLX_Only_nasnetmobile/tflite/model.tflite",
+    "tflite_mb": 4.8657989501953125,
+    "gpu": "/physical_device:GPU:0"
+  }
+]

@@ -1,0 +1,31 @@
+{
+  "run": "Run6_MLX_Only_efficientnetb0",
+  "model": "efficientnetb0",
+  "data_dir": "/GProject/dataset/real_environment",
+  "n_human": 1000,
+  "n_nonhuman": 1000,
+  "n_train": 1650,
+  "n_val": 350,
+  "epochs": 20,
+  "batch_size": 16,
+  "optimal_threshold": 0.45000000000000007,
+  "accuracy": 0.6542857142857142,
+  "recall": 0.9857142857142858,
+  "precision": 0.5369649805447471,
+  "f1": 0.6952141057934509,
+  "false_negatives": 2,
+  "false_positives": 119,
+  "confusion_matrix": [
+    [
+      91,
+      119
+    ],
+    [
+      2,
+      138
+    ]
+  ],
+  "tflite_path": "/GProject/thermal_results/Run6_MLX_Only_efficientnetb0/tflite/model.tflite",
+  "tflite_mb": 4.422538757324219,
+  "gpu": "/physical_device:GPU:0"
+}
