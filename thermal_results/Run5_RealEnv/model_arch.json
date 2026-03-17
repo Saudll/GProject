@@ -1,0 +1,42 @@
+{
+  "input_shape": [
+    160,
+    160,
+    3
+  ],
+  "backbone": "MobileNetV2",
+  "layers_after_backbone": [
+    {
+      "class": "Dropout",
+      "config": {
+        "rate": 0.3
+      }
+    },
+    {
+      "class": "Dense",
+      "config": {
+        "units": 128,
+        "activation": "relu"
+      }
+    },
+    {
+      "class": "Dropout",
+      "config": {
+        "rate": 0.2
+      }
+    },
+    {
+      "class": "Dropout",
+      "config": {
+        "rate": 0.3
+      }
+    },
+    {
+      "class": "Dense",
+      "config": {
+        "units": 1,
+        "activation": "sigmoid"
+      }
+    }
+  ]
+}

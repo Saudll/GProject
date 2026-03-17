@@ -47,7 +47,8 @@ ARCHIVE_DIR     = SCRIPT_DIR / "dataset" / "archive" / "Thermal Image Dataset"
 EXTRA_DIR       = SCRIPT_DIR / "dataset" / "extra_nonhuman"
 
 # ── Base model (Run5) ───────────────────────────────────────────────────
-BASE_MODEL = SCRIPT_DIR / "thermal_results" / "Run5_RealEnv" / "best_model.h5"
+BASE_WEIGHTS = SCRIPT_DIR / "thermal_results" / "Run5_RealEnv" / "model.weights.h5"
+BASE_ARCH    = SCRIPT_DIR / "thermal_results" / "Run5_RealEnv" / "model_arch.json"
 
 # ── Config ───────────────────────────────────────────────────────────────
 IMG_SIZE        = (160, 160)
@@ -356,8 +357,10 @@ def main():
     parser.add_argument('--epochs', type=int, default=EPOCHS_HEAD + EPOCHS_FT)
     parser.add_argument('--new_dir', type=str, default=str(NEW_CAPTURES),
                         help='Directory with new human/nonhuman captures')
-    parser.add_argument('--base_model', type=str, default=str(BASE_MODEL),
-                        help='Path to base .keras model')
+    parser.add_argument('--weights', type=str, default=str(BASE_WEIGHTS),
+                        help='Path to base model weights (.weights.h5)')
+    parser.add_argument('--arch', type=str, default=str(BASE_ARCH),
+                        help='Path to model architecture JSON')
     parser.add_argument('--check', action='store_true',
                         help='Only show dataset counts')
     args = parser.parse_args()
@@ -375,11 +378,13 @@ def main():
         print("\n[Data check only]")
         return
 
-    # ── Check base model ──────────────────────────────────────────────────
-    base_path = Path(args.base_model)
-    if not base_path.exists():
-        sys.exit(f"ERROR: Base model not found: {base_path}\n"
-                 f"Make sure Run5 best_model.keras exists.")
+    # ── Check base model files ──────────────────────────────────────────
+    weights_path = Path(args.weights)
+    arch_path = Path(args.arch)
+    if not weights_path.exists():
+        sys.exit(f"ERROR: Weights not found: {weights_path}")
+    if not arch_path.exists():
+        sys.exit(f"ERROR: Architecture not found: {arch_path}")
 
     # ── Balance classes ───────────────────────────────────────────────────
     human_items    = [x for x in all_items if x[1] == 1]
@@ -426,10 +431,29 @@ def main():
     train_gen = TrainDataset(train_items, BATCH_SIZE, augment=True)
     val_gen   = TrainDataset(val_items,   BATCH_SIZE, augment=False)
 
-    # ── Load Run5 model ───────────────────────────────────────────────────
-    print(f"\n  Loading base model: {base_path}")
-    model = keras.models.load_model(str(base_path))
-    print(f"  Model loaded: {len(model.layers)} layers")
+    # ── Rebuild model from architecture + weights ──────────────────────
+    print(f"\n  Rebuilding model from: {arch_path}")
+    with open(str(arch_path)) as f:
+        arch = json.load(f)
+
+    inp = keras.Input(shape=tuple(arch['input_shape']))
+    backbone = keras.applications.MobileNetV2(
+        input_shape=tuple(arch['input_shape']),
+        include_top=False, weights='imagenet', pooling='avg'
+    )
+    x = backbone(inp)
+    for layer_info in arch['layers_after_backbone']:
+        cls = layer_info['class']
+        cfg = layer_info['config']
+        if cls == 'Dropout':
+            x = layers.Dropout(cfg['rate'])(x)
+        elif cls == 'Dense':
+            x = layers.Dense(cfg['units'], activation=cfg['activation'])(x)
+    model = keras.Model(inputs=inp, outputs=x)
+
+    print(f"  Loading weights from: {weights_path}")
+    model.load_weights(str(weights_path))
+    print(f"  Model ready: {len(model.layers)} layers")
 
     # ── Phase 1: Freeze backbone, train head ──────────────────────────────
     print(f"\n  Phase 1: Head training ({EPOCHS_HEAD} epochs, LR={LR_HEAD})")
@@ -502,7 +526,7 @@ def main():
     # ── Save results ──────────────────────────────────────────────────────
     results = {
         'run': 'Run7_PartialViews',
-        'base_model': str(base_path),
+        'base_weights': str(weights_path),
         'n_train': len(train_items),
         'n_val': len(val_items),
         'n_new_captures': sum(1 for _, _, m in all_items if m == 'new'),
