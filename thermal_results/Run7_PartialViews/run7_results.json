@@ -1,0 +1,31 @@
+{
+  "run": "Run7_PartialViews",
+  "base_weights": "/GProject/thermal_results/Run5_RealEnv/model.weights.h5",
+  "n_train": 2380,
+  "n_val": 419,
+  "n_new_captures": 2799,
+  "note": "images pre-augmented on disk, light augmentation during training only",
+  "val_metrics": {
+    "accuracy": 0.8806682577565632,
+    "recall": 0.9810606060234447,
+    "precision": 0.8519736841825009,
+    "f1": 0.9119718259786006,
+    "fn": 5,
+    "fp": 45,
+    "threshold": 0.15000000000000002,
+    "confusion_matrix": [
+      [
+        110,
+        45
+      ],
+      [
+        5,
+        259
+      ]
+    ],
+    "n_human": 264,
+    "n_nonhuman": 155
+  },
+  "tflite": "/GProject/thermal_results/Run7_PartialViews/tflite/model.tflite",
+  "tflite_mb": 2.5490493774414062
+}
