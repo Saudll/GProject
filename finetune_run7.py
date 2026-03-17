@@ -47,7 +47,7 @@ ARCHIVE_DIR     = SCRIPT_DIR / "dataset" / "archive" / "Thermal Image Dataset"
 EXTRA_DIR       = SCRIPT_DIR / "dataset" / "extra_nonhuman"
 
 # ── Base model (Run5) ───────────────────────────────────────────────────
-BASE_MODEL = SCRIPT_DIR / "thermal_results" / "Run5_RealEnv" / "best_model.keras"
+BASE_MODEL = SCRIPT_DIR / "thermal_results" / "Run5_RealEnv" / "best_model.h5"
 
 # ── Config ───────────────────────────────────────────────────────────────
 IMG_SIZE        = (160, 160)
